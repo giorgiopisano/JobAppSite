@@ -1,0 +1,59 @@
+name: Sync from Notion and deploy
+
+on:
+  schedule:
+    # After each bot shift: 8:30, 10:30, 16:30, 18:30 ET (EDT = UTC-4).
+    # Shift these by +1 hour when clocks fall back to EST.
+    - cron: '30 12,14,20,22 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # npm ci when a lockfile is committed, plain install otherwise.
+      - run: |
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+
+      - name: Pull Apply log from Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATA_SOURCE_ID: ${{ vars.NOTION_DATA_SOURCE_ID || '2909dfcb-954c-482f-ad12-b1bc752572ea' }}
+          PRIVATE_PASSPHRASE: ${{ secrets.PRIVATE_PASSPHRASE }}
+        run: npm run sync
+
+      - name: Build site
+        env:
+          VITE_BASE: ${{ vars.VITE_BASE || format('/{0}/', github.event.repository.name) }}
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
