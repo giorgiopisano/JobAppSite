@@ -218,10 +218,11 @@ function FlowRow({ stage, count, widthPct, pctLabel, active, muted, onClick }) {
 }
 
 /** Compact Source → Outcome link list (Sankey-lite). */
-export function SourceOutcomeMatrix({ links, total }) {
+export function SourceOutcomeMatrix({ links, total, sourceLabel }) {
+  const labelOf = sourceLabel ?? ((s) => s)
   const sum = total || links.reduce((a, b) => a + b.count, 0) || 1
   if (!links.length) {
-    return <p className="text-xs text-white/45">No source/outcome pairs yet.</p>
+    return <p className="text-xs text-white/45">No channel/outcome pairs yet.</p>
   }
   return (
     <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
@@ -230,8 +231,8 @@ export function SourceOutcomeMatrix({ links, total }) {
         .sort((a, b) => b.count - a.count)
         .map((l) => (
           <li key={`${l.source}-${l.outcome}`} className="flex items-center gap-2 text-xs">
-            <span className="w-[38%] truncate text-white/65" title={l.source}>
-              {l.sourceLabel ?? l.source}
+            <span className="w-[30%] truncate text-white/65" title={l.source}>
+              {labelOf(l.source)}
             </span>
             <span className="text-white/25">→</span>
             <span className="w-[22%] truncate text-white/65">{l.outcome}</span>

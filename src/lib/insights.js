@@ -3,9 +3,15 @@
 /** Display labels for Apply log Source values (dashboard "By channel"). */
 export const CHANNEL_LABELS = {
   LinkedIn: 'LinkedIn',
-  Jobs: 'Jobs board (bot)',
-  Muse: 'Muse',
-  Other: 'Other / direct',
+  'Company careers': 'Company careers',
+  Greenhouse: 'Greenhouse',
+  Workday: 'Workday',
+  'Other ATS': 'Other ATS',
+  'Job board': 'Job board',
+  Other: 'Other',
+  // Legacy values still present in older Apply log rows (sync also remaps these)
+  Jobs: 'Company careers (legacy)',
+  Muse: 'Other (legacy)',
   '': '(no source)',
 }
 

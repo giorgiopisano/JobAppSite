@@ -55,21 +55,23 @@ export default function PublicDashboard() {
     const firstDate = data.firstDate
     const perDay = usingFilter ? perDayFrom(rows, firstDate, today) : data.perDay
     const perWeek = usingFilter ? perWeekFrom(perDay) : data.perWeek
+    const bySourceRaw = usingFilter ? countBy(rows, 'source') : data.bySource
+    const bySource = bySourceRaw.map((it) => ({
+      label: channelLabel(it.label),
+      value: it.label,
+      count: it.count,
+    }))
     return {
       rates,
       perDay,
       perWeek,
-      bySource: (usingFilter ? countBy(rows, 'source') : data.bySource).map((it) => ({
-        ...it,
-        value: it.label,
-        label: channelLabel(it.label),
-      })),
+      bySource,
       byRoleFamily: usingFilter ? countBy(rows, 'family') : data.byRoleFamily,
       byRegion: usingFilter ? countBy(rows, 'region') : data.byRegion,
       outcomeFlow: usingFilter ? outcomeFlowFrom(rows) : data.outcomeFlow ?? outcomeFlowFrom(rows),
       funnel: usingFilter ? classicFunnelFrom(rows) : data.funnel,
-      links: sourceOutcomeLinks(rows).map((l) => ({ ...l, sourceLabel: channelLabel(l.source) })),
-      insight: buildInsightLine(rows, usingFilter ? countBy(rows, 'source') : data.bySource),
+      links: sourceOutcomeLinks(rows),
+      insight: buildInsightLine(rows, bySourceRaw),
       status: (usingFilter ? [] : data.byStatus).filter((s) => s.label !== 'Skipped'),
     }
   }, [data, filter, filteredFacts, today])
@@ -200,7 +202,11 @@ export default function PublicDashboard() {
             onSelect={toggleFilter}
           />
         </Card>
-        <Card title="By channel" subtitle="LinkedIn vs Jobs board bot vs Other / direct" delay={500}>
+        <Card
+          title="By channel"
+          subtitle="LinkedIn · Company careers · Greenhouse · Workday · Other ATS · Job board"
+          delay={500}
+        >
           <Breakdown
             items={slice.bySource}
             colors={PALETTE}
@@ -219,8 +225,8 @@ export default function PublicDashboard() {
             onSelect={toggleFilter}
           />
         </Card>
-        <Card title="Channel → outcome" subtitle="What's hitting by source" delay={600}>
-          <SourceOutcomeMatrix links={slice.links} total={r.submitted} />
+        <Card title="Channel → outcome" subtitle="What's hitting by apply channel" delay={600}>
+          <SourceOutcomeMatrix links={slice.links} total={r.submitted} sourceLabel={channelLabel} />
           {!filter && slice.status?.length > 0 && (
             <div className="mt-5 border-t border-white/8 pt-4">
               <p className="mb-3 text-xs font-semibold text-white/70">Attempt status</p>
