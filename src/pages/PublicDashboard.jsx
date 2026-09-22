@@ -10,7 +10,7 @@ import {
   ApplicationFunnel,
   SourceOutcomeMatrix,
 } from '../components/Charts.jsx'
-import { dataUrl, longDate, monthLabel, relativeTime, shortDate } from '../lib/format.js'
+import { dataUrl, monthLabel, relativeTime, shortDate } from '../lib/format.js'
 import {
   buildInsightLine,
   channelLabel,
