@@ -14,8 +14,9 @@ permissions:
   pages: write
   id-token: write
 
-# Do not cancel an in-flight Pages deploy when another run starts (merge + manual
-# re-run used to cancel deploy and leave the site on an old bundle).
+# Queue Pages deploys; never let an older run overwrite a newer tip of main.
+# (cancel-in-progress: false avoids killing a deploy mid-flight; the tip check
+# below skips stale runs that finish late — that was overwriting Career Track.)
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -59,5 +60,24 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Skip deploy if this run is not tip of main
+        id: tip
+        run: |
+          git fetch origin main --depth=1
+          tip=$(git rev-parse origin/main)
+          echo "tip=${tip}"
+          echo "this=${GITHUB_SHA}"
+          if [ "${GITHUB_SHA}" != "${tip}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping Pages deploy: ${GITHUB_SHA} is behind tip ${tip}"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - id: deployment
+        if: steps.tip.outputs.skip != 'true'
         uses: actions/deploy-pages@v5
