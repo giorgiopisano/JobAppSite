@@ -59,7 +59,7 @@ export function classicFunnelFrom(facts) {
   const interviewed = facts.filter((f) => f.outcome === 'Interview' || f.outcome === 'Offer').length
   const offered = facts.filter((f) => f.outcome === 'Offer').length
   return [
-    { stage: 'Applied', count: submitted },
+    { stage: 'Submitted', count: submitted },
     { stage: 'Interview', count: interviewed },
     { stage: 'Offer', count: offered },
   ]

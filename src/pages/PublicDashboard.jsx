@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, Stat, Pill } from '../components/Card.jsx'
+import { Card, Kpi, Pill } from '../components/Card.jsx'
 import Heatmap from '../components/Heatmap.jsx'
-import { WeeklyBars, DailyArea, Breakdown, OutcomeFlow, SourceOutcomeMatrix } from '../components/Charts.jsx'
+import {
+  WeeklyBars,
+  DailyArea,
+  Breakdown,
+  OutcomeFlow,
+  ApplicationFunnel,
+  SourceOutcomeMatrix,
+} from '../components/Charts.jsx'
 import { dataUrl, longDate, monthLabel, relativeTime, shortDate } from '../lib/format.js'
 import {
   buildInsightLine,
@@ -18,7 +25,7 @@ import {
   sourceOutcomeLinks,
 } from '../lib/insights.js'
 
-const PALETTE = ['#22d3ee', '#818cf8', '#34d399', '#fbbf24', '#f472b6', '#94a3b8']
+const PALETTE = ['#3dd6f5', '#7dd3fc', '#67e8f9', '#38bdf8', '#a5f3fc', '#94a3b8']
 
 const DIM_LABEL = { source: 'Channel', family: 'Role', region: 'Region', outcome: 'Outcome' }
 
@@ -26,7 +33,7 @@ export default function PublicDashboard() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [filter, setFilter] = useState(null) // { dim, value } | null
+  const [filter, setFilter] = useState(null)
 
   useEffect(() => {
     fetch(dataUrl('public.json'), { cache: 'no-cache' })
@@ -61,6 +68,7 @@ export default function PublicDashboard() {
       value: it.label,
       count: it.count,
     }))
+    const funnel = usingFilter ? classicFunnelFrom(rows) : normalizeFunnel(data.funnel, rates)
     return {
       rates,
       perDay,
@@ -69,9 +77,10 @@ export default function PublicDashboard() {
       byRoleFamily: usingFilter ? countBy(rows, 'family') : data.byRoleFamily,
       byRegion: usingFilter ? countBy(rows, 'region') : data.byRegion,
       outcomeFlow: usingFilter ? outcomeFlowFrom(rows) : data.outcomeFlow ?? outcomeFlowFrom(rows),
-      funnel: usingFilter ? classicFunnelFrom(rows) : data.funnel,
+      funnel,
       links: sourceOutcomeLinks(rows),
       insight: buildInsightLine(rows, bySourceRaw),
+      funnelInsight: funnelInsight(rates),
       status: (usingFilter ? [] : data.byStatus).filter((s) => s.label !== 'Skipped'),
     }
   }, [data, filter, filteredFacts, today])
@@ -85,127 +94,89 @@ export default function PublicDashboard() {
 
   const t = data.totals
   const r = slice.rates
-  const sinceDays = t.daysElapsed
+  const offerRate = fmtPct(r.offered, r.submitted || 1)
 
   return (
     <div className="space-y-5">
-      <section
-        className="glass glass-hover rise relative overflow-hidden p-6 sm:p-8"
-        onMouseMove={spotMove}
-      >
-        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-accent/15 blur-3xl" />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">{monthLabel(t.thisMonthLabel)} so far</p>
-            <p className="num glow mt-2 text-7xl font-extrabold leading-none text-accent sm:text-8xl">
-              {filter ? r.submitted : t.thisMonth}
-            </p>
-            <p className="mt-3 text-sm text-white/60">
-              {filter ? (
-                <>
-                  applications in this slice.{' '}
-                  <span className="text-white/85">{t.submitted}</span> total since {longDate(data.firstDate)}.
-                </>
-              ) : (
-                <>
-                  applications submitted this month.{' '}
-                  <span className="text-white/85">{t.submitted}</span> total since {longDate(data.firstDate)}.
-                </>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Pill tone="accent">{t.streak}-day streak</Pill>
-            <Pill tone="green">{t.perActiveDay} per active day</Pill>
-            <Pill tone="amber">{t.inProgress} in progress</Pill>
-            <Pill>updated {relativeTime(data.generatedAt)}</Pill>
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">Career Track</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Job Hunt Overview</h1>
+          <p className="mt-1 text-sm text-white/50">Track progress, analyze channels, stay focused.</p>
         </div>
-
-        <div className="relative mt-6 grid gap-3 sm:grid-cols-3">
-          <InsightStat
-            label="Interview rate"
-            value={fmtPct(r.interviewed, r.submitted || 1)}
-            hint={`${r.interviewed} of ${r.submitted} submitted`}
-          />
-          <InsightStat
-            label="Offer rate"
-            value={fmtPct(r.offered, r.submitted || 1)}
-            hint={`${r.offered} offers`}
-          />
-          <InsightStat
-            label="Rejection rate"
-            value={fmtPct(r.rejected, r.submitted || 1)}
-            hint={`${r.rejected} rejected`}
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill tone="accent">{t.streak}-day streak</Pill>
+          <Pill>{relativeTime(data.generatedAt)}</Pill>
+          {filter && (
+            <>
+              <Pill tone="accent" active>
+                {DIM_LABEL[filter.dim] ?? filter.dim}:{' '}
+                {filter.dim === 'source' ? channelLabel(filter.value) : filter.value}
+              </Pill>
+              <Pill onClick={() => setFilter(null)}>Clear filter</Pill>
+            </>
+          )}
         </div>
-
-        <p className="relative mt-4 text-sm text-white/70">
-          <span className="eyebrow mr-2 !normal-case !tracking-normal text-accent">Insight</span>
-          {slice.insight}
-        </p>
-
-        {filter && (
-          <div className="relative mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-white/45">Filtered by</span>
-            <Pill tone="accent" active>
-              {DIM_LABEL[filter.dim] ?? filter.dim}:{' '}
-              {filter.dim === 'source' ? channelLabel(filter.value) : filter.value}
-            </Pill>
-            <Pill onClick={() => setFilter(null)}>Clear filter</Pill>
-          </div>
-        )}
-      </section>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Current streak" value={`${t.streak}d`} hint={`best ${t.bestStreak} days`} accent delay={50} />
-        <Stat label="Best day" value={t.bestDay.count} hint={longDate(t.bestDay.date)} delay={100} />
-        <Stat label="Active days" value={`${t.activeDays}/${sinceDays}`} hint="days with at least one apply" delay={150} />
-        <Stat label="In progress" value={t.inProgress} hint={`${t.blocked} blocked, ${t.incomplete} incomplete`} delay={200} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card title="Per week" subtitle="Submitted applications, Monday-based weeks" className="lg:col-span-3" delay={250}>
-          <WeeklyBars perWeek={slice.perWeek} />
-        </Card>
-        <Card title="Daily rhythm" subtitle={`${shortDate(data.firstDate)} to today`} className="lg:col-span-2" delay={300}>
-          <DailyArea perDay={slice.perDay} />
-        </Card>
-      </div>
-
-      <Card title="Activity" subtitle="Click a day to open Detail for that date" delay={350}>
-        <Heatmap
-          perDay={slice.perDay}
-          onDayClick={(day) => {
-            if (!day?.date) return
-            navigate(`/private?date=${day.date}`)
-          }}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi
+          label="Applications"
+          value={filter ? r.submitted : t.thisMonth}
+          hint={filter ? `${t.submitted} total all time` : `${monthLabel(t.thisMonthLabel)} · ${t.submitted} total`}
+          icon={<IconPlane />}
+          delay={40}
+          activeDots={3}
         />
-      </Card>
+        <Kpi
+          label="Interviews"
+          value={r.interviewed}
+          hint={`${fmtPct(r.interviewed, r.submitted || 1)} of submitted`}
+          icon={<IconCal />}
+          delay={80}
+          activeDots={r.interviewed ? 2 : 1}
+        />
+        <Kpi
+          label="Offers"
+          value={r.offered}
+          hint={r.offered ? 'From tagged outcomes' : 'Tag Offer on Apply log'}
+          icon={<IconStar />}
+          delay={120}
+          activeDots={r.offered ? 3 : 1}
+        />
+        <Kpi
+          label="Offer rate"
+          value={offerRate}
+          hint={`${r.offered} of ${r.submitted || 0} submitted`}
+          icon={<IconPie />}
+          delay={160}
+          activeDots={r.offered ? 2 : 1}
+        />
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card title="By role family" subtitle="Click a bar to filter the dashboard" delay={400}>
-          <Breakdown
-            items={slice.byRoleFamily}
-            colors={PALETTE}
-            dim="family"
-            activeLabel={filter?.dim === 'family' ? filter.value : null}
+      <p className="rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-white/65 ring-1 ring-white/8">
+        <span className="mr-2 text-accent">Insight</span>
+        {slice.insight}
+      </p>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card
+          title="Application funnel"
+          subtitle="Submitted → Interview → Offer"
+          delay={200}
+          action={<span className="text-[11px] text-white/35">Conversion rate</span>}
+        >
+          <ApplicationFunnel
+            stages={slice.funnel}
+            activeStage={filter?.dim === 'outcome' ? filter.value : null}
             onSelect={toggleFilter}
-          />
-        </Card>
-        <Card title="By region" subtitle="Where the role sits" delay={450}>
-          <Breakdown
-            items={slice.byRegion}
-            colors={PALETTE}
-            dim="region"
-            activeLabel={filter?.dim === 'region' ? filter.value : null}
-            onSelect={toggleFilter}
+            insight={slice.funnelInsight}
           />
         </Card>
         <Card
-          title="By channel"
-          subtitle="LinkedIn · Company careers · Greenhouse · Workday · Other ATS · Job board"
-          delay={500}
+          title="Applications by channel"
+          subtitle="Hover a channel to filter applications"
+          delay={250}
         >
           <Breakdown
             items={slice.bySource}
@@ -217,8 +188,48 @@ export default function PublicDashboard() {
         </Card>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Card title="Activity overview" subtitle="Submitted applications by week" className="lg:col-span-3" delay={300}>
+          <WeeklyBars perWeek={slice.perWeek} />
+        </Card>
+        <Card title="Daily rhythm" subtitle={`${shortDate(data.firstDate)} to today`} className="lg:col-span-2" delay={350}>
+          <DailyArea perDay={slice.perDay} />
+        </Card>
+      </div>
+
+      <Card title="Activity" subtitle="Click a day to open Applications for that date" delay={400}>
+        <Heatmap
+          perDay={slice.perDay}
+          onDayClick={(day) => {
+            if (!day?.date) return
+            navigate(`/private?date=${day.date}`)
+          }}
+        />
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
-        <Card title="Outcome flow" subtitle="Where applications land after submit" delay={550}>
+        <Card title="By role family" subtitle="Click a bar to filter" delay={450}>
+          <Breakdown
+            items={slice.byRoleFamily}
+            colors={PALETTE}
+            dim="family"
+            activeLabel={filter?.dim === 'family' ? filter.value : null}
+            onSelect={toggleFilter}
+          />
+        </Card>
+        <Card title="By region" subtitle="Where the role sits" delay={500}>
+          <Breakdown
+            items={slice.byRegion}
+            colors={PALETTE}
+            dim="region"
+            activeLabel={filter?.dim === 'region' ? filter.value : null}
+            onSelect={toggleFilter}
+          />
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card title="Outcome split" subtitle="Where applications land after submit" delay={550}>
           <OutcomeFlow
             stages={slice.outcomeFlow}
             activeStage={filter?.dim === 'outcome' ? filter.value : null}
@@ -231,10 +242,6 @@ export default function PublicDashboard() {
             <div className="mt-5 border-t border-white/8 pt-4">
               <p className="mb-3 text-xs font-semibold text-white/70">Attempt status</p>
               <Breakdown items={slice.status} colors={['#34d399', '#fb7185', '#fbbf24']} />
-              <p className="mt-4 text-xs text-white/40">
-                Blocked means the application form broke. Incomplete means it stopped before submit. Both are queued for a
-                retry.
-              </p>
             </div>
           )}
         </Card>
@@ -249,7 +256,7 @@ export default function PublicDashboard() {
       <p className="px-1 text-center text-xs text-white/40">
         Public page shows aggregates only.{' '}
         <Link to="/private" className="text-accent/80 hover:text-accent">
-          Detail
+          Applications
         </Link>{' '}
         unlocks encrypted company and role rows in your browser.
       </p>
@@ -257,21 +264,28 @@ export default function PublicDashboard() {
   )
 }
 
-function InsightStat({ label, value, hint }) {
-  return (
-    <div className="rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/8 transition hover:ring-accent/25">
-      <p className="eyebrow">{label}</p>
-      <p className="num mt-1 text-2xl font-bold text-white">{value}</p>
-      <p className="mt-0.5 text-[11px] text-white/40">{hint}</p>
-    </div>
-  )
+function normalizeFunnel(funnel, rates) {
+  if (funnel?.length) {
+    return funnel.map((s) =>
+      s.stage === 'Applied' ? { ...s, stage: 'Submitted' } : s,
+    )
+  }
+  return [
+    { stage: 'Submitted', count: rates.submitted },
+    { stage: 'Interview', count: rates.interviewed },
+    { stage: 'Offer', count: rates.offered },
+  ]
 }
 
-function spotMove(e) {
-  const el = e.currentTarget
-  const rect = el.getBoundingClientRect()
-  el.style.setProperty('--spot-x', `${((e.clientX - rect.left) / rect.width) * 100}%`)
-  el.style.setProperty('--spot-y', `${((e.clientY - rect.top) / rect.height) * 100}%`)
+function funnelInsight(rates) {
+  if (!rates.submitted) return 'No submissions in this slice yet.'
+  if (!rates.interviewed) {
+    return 'No interviews tagged yet — conversion stays flat until Outcomes move past Applied.'
+  }
+  if (rates.offered && rates.interviewed) {
+    return `Conversion from interview to offer is ${fmtPct(rates.offered, rates.interviewed)} this slice.`
+  }
+  return `Interview rate is ${fmtPct(rates.interviewed, rates.submitted)} of submitted.`
 }
 
 function Empty({ title, body }) {
@@ -280,5 +294,44 @@ function Empty({ title, body }) {
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-xs text-white/50">{body}</p>
     </div>
+  )
+}
+
+function IconPlane() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2 8.2 14 3.5 9.2 13 7.6 9.1 2 8.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconCal() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.5 6.5h11M5.5 2.5v2M10.5 2.5v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconStar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 2.5l1.5 3.2 3.5.4-2.6 2.4.7 3.4L8 10.4 4.9 11.9l.7-3.4L3 6.1l3.5-.4L8 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconPie() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="5.2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 2.8V8l3.8 3.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   )
 }
