@@ -139,6 +139,7 @@ body {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 0.75rem;
+  width: 100%;
   min-height: 3.35rem;
   padding: 0.7rem 1.35rem 0.7rem 1.1rem;
   color: #071018;
@@ -148,18 +149,24 @@ body {
     filter 0.2s ease,
     transform 0.2s ease,
     opacity 0.2s ease;
+  pointer-events: none;
 }
 
-.funnel-step:first-child {
+.funnel-stack > button {
+  cursor: pointer;
+}
+
+.funnel-stack > button:hover .funnel-step {
+  filter: brightness(1.06);
+}
+
+.funnel-step:first-child,
+.funnel-stack > button:first-child .funnel-step {
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
 }
 
-.funnel-step:last-child {
+.funnel-stack > button:last-child .funnel-step {
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%);
-}
-
-.funnel-step:hover {
-  filter: brightness(1.06);
 }
 
 .funnel-step.active {
@@ -169,16 +176,6 @@ body {
 
 .funnel-step.muted {
   opacity: 0.38;
-}
-
-.funnel-step.narrow {
-  margin-left: 0.85rem;
-  margin-right: 0.85rem;
-}
-
-.funnel-step.narrower {
-  margin-left: 1.7rem;
-  margin-right: 1.7rem;
 }
 
 @keyframes rise {

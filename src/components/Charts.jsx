@@ -230,13 +230,16 @@ export function ApplicationFunnel({ stages, onSelect, activeStage, insight }) {
               key={row.stage}
               type="button"
               onClick={() => onSelect?.('outcome', row.filterValue)}
-              className={`funnel-step ${row.narrow} ${active ? 'active' : ''} ${muted ? 'muted' : ''}`}
+              className={`block w-full text-left ${row.narrow === 'narrow' ? 'px-[0.85rem]' : row.narrow === 'narrower' ? 'px-[1.7rem]' : ''}`}
+              aria-pressed={active}
             >
-              <span className="text-left">
-                <span className="block text-xs font-semibold tracking-wide text-ink/80">{row.stage}</span>
-                <span className="block text-[11px] text-ink/55">{row.pctLabel}</span>
+              <span className={`funnel-step ${active ? 'active' : ''} ${muted ? 'muted' : ''}`}>
+                <span className="text-left">
+                  <span className="block text-xs font-semibold tracking-wide text-ink/80">{row.stage}</span>
+                  <span className="block text-[11px] text-ink/55">{row.pctLabel}</span>
+                </span>
+                <span className="num text-xl font-bold text-ink">{row.count}</span>
               </span>
-              <span className="num text-xl font-bold text-ink">{row.count}</span>
             </button>
           )
         })}
