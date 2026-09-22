@@ -163,7 +163,7 @@ export function OutcomeFlow({ stages, onSelect, activeStage }) {
         muted={activeStage && activeStage !== 'Submitted'}
         onClick={() => onSelect?.('outcome', 'Submitted')}
       />
-      <div className="relative ml-2 border-l border-white/10 pl-4 space-y-2">
+      <div className="relative ml-2 space-y-2 border-l border-white/10 pl-4">
         {branches.map((s) => {
           const w = Math.max(10, Math.round((s.count / top) * 100))
           return (
@@ -181,8 +181,74 @@ export function OutcomeFlow({ stages, onSelect, activeStage }) {
         })}
       </div>
       <p className="pt-1 text-xs text-white/40">
-        Click a stage to filter the dashboard. Outcomes are tagged by hand on the Apply log.
+        Click a stage to filter. Outcomes are tagged by hand on the Apply log.
       </p>
+    </div>
+  )
+}
+
+/**
+ * Career Track style-3 chevron funnel: Submitted → Interview → Offer.
+ * Percent under Interview is of Submitted; under Offer is of Interview.
+ */
+export function ApplicationFunnel({ stages, onSelect, activeStage, insight }) {
+  const submitted = stages.find((s) => s.stage === 'Submitted' || s.stage === 'Applied')?.count || 0
+  const interview = stages.find((s) => s.stage === 'Interview')?.count || 0
+  const offer = stages.find((s) => s.stage === 'Offer')?.count || 0
+  const rows = [
+    {
+      stage: 'Submitted',
+      count: submitted,
+      pctLabel: '100%',
+      filterValue: 'Submitted',
+      narrow: '',
+    },
+    {
+      stage: 'Interview',
+      count: interview,
+      pctLabel: submitted ? `${fmtPct(interview, submitted)} of submitted` : '—',
+      filterValue: 'Interview',
+      narrow: 'narrow',
+    },
+    {
+      stage: 'Offer',
+      count: offer,
+      pctLabel: interview ? `${fmtPct(offer, interview)} of interviews` : '—',
+      filterValue: 'Offer',
+      narrow: 'narrower',
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="funnel-stack">
+        {rows.map((row) => {
+          const active = activeStage === row.filterValue
+          const muted = activeStage && !active
+          return (
+            <button
+              key={row.stage}
+              type="button"
+              onClick={() => onSelect?.('outcome', row.filterValue)}
+              className={`block w-full text-left ${row.narrow === 'narrow' ? 'px-[0.85rem]' : row.narrow === 'narrower' ? 'px-[1.7rem]' : ''}`}
+              aria-pressed={active}
+            >
+              <span className={`funnel-step ${active ? 'active' : ''} ${muted ? 'muted' : ''}`}>
+                <span className="text-left">
+                  <span className="block text-xs font-semibold tracking-wide text-ink/80">{row.stage}</span>
+                  <span className="block text-[11px] text-ink/55">{row.pctLabel}</span>
+                </span>
+                <span className="num text-xl font-bold text-ink">{row.count}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {insight && (
+        <p className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/45">
+          <span>{insight}</span>
+        </p>
+      )}
     </div>
   )
 }

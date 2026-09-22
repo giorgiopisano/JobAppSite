@@ -48,6 +48,18 @@ To run against real Notion data locally, copy `.env.example` to `.env`, fill it 
 
 Give someone the URL `https://<user>.github.io/<repo>/#/private` plus the passphrase. The passphrase is remembered for the browser tab only. To revoke access, change the `PRIVATE_PASSPHRASE` secret and re-run the workflow; the old passphrase stops working on the next deploy.
 
+### Can I use Sign in with Google instead?
+
+Not with this site alone. It is a **static** GitHub Pages app: there is no server to run Google’s OAuth code exchange or to keep a client secret. The Applications view also decrypts `private.enc` **in the browser** with the passphrase — Google login would prove who you are, but something still has to hand you that decryption key.
+
+Practical options if you want Google later (in order of effort):
+
+1. **Cloudflare Access** (or similar) in front of the Pages site / Applications path — “Sign in with Google”, allowlist your Gmail, then you land already past a gate. Still need the passphrase for decrypt unless you also stop publishing `private.enc` publicly.
+2. **Tiny edge function** (Cloudflare Worker / Netlify Function): Google OAuth → check email is yours → return the passphrase (or a short-lived unlock token). The static UI stays; one Worker holds the secret.
+3. **Move hosting** to something with built-in auth (Firebase, Supabase, Clerk + a backend) — more moving parts than Pages.
+
+Until then, save the passphrase in your browser’s password manager (the unlock form is marked `autocomplete="current-password"` for that).
+
 ## Notion schema this expects
 
 Database: `Apply log` (data source `2909dfcb-954c-482f-ad12-b1bc752572ea`)

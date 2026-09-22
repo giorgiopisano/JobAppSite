@@ -7,7 +7,7 @@ export function Card({ title, subtitle, action, className = '', children, delay 
       {(title || action) && (
         <header className="mb-4 flex items-start justify-between gap-3">
           <div>
-            {title && <h2 className="text-sm font-semibold text-white/85">{title}</h2>}
+            {title && <h2 className="text-sm font-semibold text-white/88">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-xs text-white/45">{subtitle}</p>}
           </div>
           {action}
@@ -26,6 +26,29 @@ export function Stat({ label, value, hint, accent = false, delay = 0 }) {
         {value}
       </p>
       {hint && <p className="mt-1 text-xs text-white/45">{hint}</p>}
+    </div>
+  )
+}
+
+/** Career Track style KPI tile with icon + status dots. */
+export function Kpi({ label, value, hint, icon, delay = 0, activeDots = 1 }) {
+  return (
+    <div className="glass glass-hover rise p-4 sm:p-5" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs text-white/50">{label}</p>
+          <p className="num mt-1.5 text-3xl font-bold text-white sm:text-[2rem]">{value}</p>
+          {hint && <p className="mt-1 text-[11px] text-white/40">{hint}</p>}
+        </div>
+        <div className="kpi-icon" aria-hidden="true">
+          {icon}
+        </div>
+      </div>
+      <div className="kpi-dots mt-4">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className={i < activeDots ? 'on' : ''} />
+        ))}
+      </div>
     </div>
   )
 }

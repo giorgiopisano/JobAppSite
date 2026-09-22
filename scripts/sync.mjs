@@ -188,7 +188,7 @@ function buildPublic(rows) {
 
   // Classic conversion funnel (Interview includes Offer).
   const funnel = [
-    { stage: 'Applied', count: submitted.length },
+    { stage: 'Submitted', count: submitted.length },
     { stage: 'Interview', count: interviewed + offered },
     { stage: 'Offer', count: offered },
   ]

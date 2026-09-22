@@ -55,10 +55,10 @@ export default function PrivateView() {
 
   if (!payload) {
     return (
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-md space-y-4">
         <Card
-          title="Private detail view"
-          subtitle="Companies, roles and links. Decrypted in your browser; nothing is sent anywhere."
+          title="Unlock applications"
+          subtitle="Companies, roles, and links decrypt in your browser. Nothing is sent to a server."
         >
           <form onSubmit={unlock} className="space-y-3">
             <label className="block text-xs text-white/45" htmlFor="passphrase">
@@ -66,7 +66,9 @@ export default function PrivateView() {
             </label>
             <input
               id="passphrase"
+              name="password"
               type="password"
+              autoComplete="current-password"
               autoFocus
               value={pass}
               onChange={(e) => setPass(e.target.value)}
@@ -78,11 +80,21 @@ export default function PrivateView() {
               disabled={!envelope || !pass || busy}
               className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-ink transition hover:brightness-110 disabled:opacity-40"
             >
-              {busy ? 'Decrypting' : envelope ? 'Unlock' : 'Loading'}
+              {busy ? 'Decrypting' : envelope ? 'Unlock with passphrase' : 'Loading'}
             </button>
             {error && <p className="text-xs text-rose-300">{error}</p>}
           </form>
         </Card>
+
+        <div className="glass p-4 text-xs leading-relaxed text-white/50">
+          <p className="font-semibold text-white/70">Want Sign in with Google instead?</p>
+          <p className="mt-2">
+            Not on this static GitHub Pages setup alone. Google OAuth needs a small backend (or Cloudflare Access)
+            to verify your Gmail and hand back the decryption key. The passphrase is what unlocks{' '}
+            <span className="text-white/70">private.enc</span> locally today. Easiest upgrades later: Cloudflare
+            Access in front of Applications, or a Worker that checks your Google account then returns the key.
+          </p>
+        </div>
       </div>
     )
   }
