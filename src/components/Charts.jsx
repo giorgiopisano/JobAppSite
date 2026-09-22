@@ -102,13 +102,14 @@ export function Breakdown({ items, total, colors, activeLabel, onSelect, dim }) 
     <ul className="space-y-3">
       {items.map((it, i) => {
         const pct = Math.round((it.count / sum) * 100)
-        const active = activeLabel === it.label
+        const filterValue = it.value ?? it.label
+        const active = activeLabel === filterValue
         const muted = activeLabel && !active
         return (
-          <li key={it.label}>
+          <li key={filterValue}>
             <button
               type="button"
-              onClick={() => onSelect?.(dim, it.label)}
+              onClick={() => onSelect?.(dim, filterValue)}
               className={`group w-full rounded-lg text-left transition ${onSelect ? 'cursor-pointer hover:bg-white/[0.03]' : 'cursor-default'} ${active ? 'bg-accent/10 ring-1 ring-accent/30' : ''} px-1.5 py-1 -mx-1.5`}
             >
               <div className="mb-1 flex items-center justify-between text-xs">
@@ -217,10 +218,11 @@ function FlowRow({ stage, count, widthPct, pctLabel, active, muted, onClick }) {
 }
 
 /** Compact Source → Outcome link list (Sankey-lite). */
-export function SourceOutcomeMatrix({ links, total }) {
+export function SourceOutcomeMatrix({ links, total, sourceLabel }) {
+  const labelOf = sourceLabel ?? ((s) => s)
   const sum = total || links.reduce((a, b) => a + b.count, 0) || 1
   if (!links.length) {
-    return <p className="text-xs text-white/45">No source/outcome pairs yet.</p>
+    return <p className="text-xs text-white/45">No channel/outcome pairs yet.</p>
   }
   return (
     <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
@@ -229,7 +231,7 @@ export function SourceOutcomeMatrix({ links, total }) {
         .sort((a, b) => b.count - a.count)
         .map((l) => (
           <li key={`${l.source}-${l.outcome}`} className="flex items-center gap-2 text-xs">
-            <span className="w-[30%] truncate text-white/65">{l.source}</span>
+            <span className="w-[30%] truncate text-white/65">{labelOf(l.source)}</span>
             <span className="text-white/25">→</span>
             <span className="w-[28%] truncate text-white/65">{l.outcome}</span>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/6">

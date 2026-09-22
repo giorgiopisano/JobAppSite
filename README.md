@@ -57,7 +57,7 @@ Database: `Apply log` (data source `2909dfcb-954c-482f-ad12-b1bc752572ea`)
 | Name | title | `Company - Role` |
 | Date | date | all time series (interpreted as ET) |
 | Company, Role, Location | text | private view; role family and region are keyword-derived in `scripts/classify.mjs` |
-| Source | select: LinkedIn / Jobs / Muse / Other | channel breakdown |
+| Source | select: LinkedIn / Company careers / Greenhouse / Workday / Other ATS / Job board / Other | channel breakdown (legacy Jobs→Company careers, Muse→Other at sync) |
 | Applied by | select: Grok / Muse | private view badge |
 | URL | url | private view link (query strings stripped) |
 | Result | select: Submitted / Blocked / Incomplete / Skipped | headline counts use Submitted; Blocked + Incomplete = "in progress"; Skipped hidden |

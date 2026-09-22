@@ -1,5 +1,25 @@
 // Client-side helpers for public aggregates / anonymized facts.
 
+/** Display labels for Apply log Source values (dashboard "By channel"). */
+export const CHANNEL_LABELS = {
+  LinkedIn: 'LinkedIn',
+  'Company careers': 'Company careers',
+  Greenhouse: 'Greenhouse',
+  Workday: 'Workday',
+  'Other ATS': 'Other ATS',
+  'Job board': 'Job board',
+  Other: 'Other',
+  // Legacy values still present in older Apply log rows (sync also remaps these)
+  Jobs: 'Company careers (legacy)',
+  Muse: 'Other (legacy)',
+  '': '(no source)',
+}
+
+export function channelLabel(source) {
+  if (source == null || source === '') return CHANNEL_LABELS['']
+  return CHANNEL_LABELS[source] ?? source
+}
+
 export function pct(n, d) {
   if (!d) return 0
   return Math.round((n / d) * 1000) / 10
@@ -111,7 +131,8 @@ function bestByInterview(facts, dim, min = 3) {
 }
 
 export function buildInsightLine(facts, bySource) {
-  const topChannel = bySource?.[0]?.label
+  const top = bySource?.[0]
+  const topChannel = top ? channelLabel(top.label) : null
   const volumeBit = topChannel ? `Most volume via ${topChannel}` : null
   const bestFamily = bestByInterview(facts, 'family', 2)
   const bestSource = bestByInterview(facts, 'source', 3)
@@ -121,7 +142,7 @@ export function buildInsightLine(facts, bySource) {
       ? `interviews concentrated in ${bestFamily.label} (${fmtPct(bestFamily.hits, bestFamily.total)})`
       : `no interviews yet across role families with ${bestFamily.total}+ apps`
     : bestSource?.hits > 0
-      ? `${bestSource.label} leads interview rate (${fmtPct(bestSource.hits, bestSource.total)})`
+      ? `${channelLabel(bestSource.label)} leads interview rate (${fmtPct(bestSource.hits, bestSource.total)})`
       : null
 
   if (volumeBit && hitBit) return `${volumeBit}; ${hitBit}.`

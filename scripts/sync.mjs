@@ -115,6 +115,14 @@ function countBy(rows, key) {
   return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count }))
 }
 
+// Legacy Source=Jobs → Company careers; Source=Muse is not a channel (Applied by already tracks Muse).
+function normalizeSource(s) {
+  if (!s) return ''
+  if (s === 'Jobs') return 'Company careers'
+  if (s === 'Muse') return 'Other'
+  return s
+}
+
 function buildPublic(rows) {
   const today = todayET()
   const dated = rows.filter((r) => r.date)
@@ -194,19 +202,19 @@ function buildPublic(rows) {
     { stage: 'Offer', count: offered },
   ]
 
-  // Safe cross-tabs (no company / role / URL).
-  const bySourceOutcome = crossTab(enriched, 'source', 'outcome')
-  const byRoleOutcome = crossTab(enriched, 'family', 'outcome')
-  const byRegionOutcome = crossTab(enriched, 'region', 'outcome')
-
   // Anonymized fact rows so the public UI can cross-filter without private fields.
   const facts = enriched.map((r) => ({
     date: r.date,
-    source: r.source || 'Other',
+    source: normalizeSource(r.source),
     family: r.family,
     region: r.region,
     outcome: r.outcome || 'Applied',
   }))
+
+  const enrichedForSource = enriched.map((r) => ({ ...r, source: normalizeSource(r.source) || 'Other' }))
+  const bySourceOutcome = crossTab(enrichedForSource, 'source', 'outcome')
+  const byRoleOutcome = crossTab(enriched, 'family', 'outcome')
+  const byRegionOutcome = crossTab(enriched, 'region', 'outcome')
 
   const rate = (count) => +(count / n).toFixed(3)
 
@@ -239,7 +247,7 @@ function buildPublic(rows) {
     perDay,
     perWeek,
     perMonth,
-    bySource: countBy(enriched, 'source'),
+    bySource: countBy(enrichedForSource, 'source'),
     byRoleFamily: countBy(enriched, 'family'),
     byRegion: countBy(enriched, 'region'),
     byStatus: countBy(dated, 'result'),
@@ -295,6 +303,7 @@ function buildPrivate(rows) {
     .map((r) => {
       const out = {}
       for (const k of PRIVATE_FIELDS) out[k] = r[k] ?? ''
+      out.source = normalizeSource(out.source) || out.source || 'Other'
       out.family = roleFamily(r.role)
       out.region = region(r.location)
       return out
