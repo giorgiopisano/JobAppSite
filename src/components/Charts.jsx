@@ -231,9 +231,11 @@ export function SourceOutcomeMatrix({ links, total, sourceLabel }) {
         .sort((a, b) => b.count - a.count)
         .map((l) => (
           <li key={`${l.source}-${l.outcome}`} className="flex items-center gap-2 text-xs">
-            <span className="w-[30%] truncate text-white/65">{labelOf(l.source)}</span>
+            <span className="w-[30%] truncate text-white/65" title={l.source}>
+              {labelOf(l.source)}
+            </span>
             <span className="text-white/25">→</span>
-            <span className="w-[28%] truncate text-white/65">{l.outcome}</span>
+            <span className="w-[22%] truncate text-white/65">{l.outcome}</span>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/6">
               <div
                 className="h-full rounded-full bg-accent/70 transition-all duration-500"
