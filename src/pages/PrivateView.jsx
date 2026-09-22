@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card, Pill } from '../components/Card.jsx'
 import { decryptPayload } from '../lib/crypto.js'
 import { dataUrl, longDate, relativeTime } from '../lib/format.js'
+import { fmtPct } from '../lib/insights.js'
 
 const SESSION_KEY = 'jobhunt.passphrase'
 
@@ -23,7 +25,6 @@ export default function PrivateView() {
       .catch((e) => setError(e.message))
   }, [])
 
-  // Auto-unlock when a passphrase is remembered for this tab.
   useEffect(() => {
     if (envelope && pass && !payload && !busy) unlock()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,9 +56,16 @@ export default function PrivateView() {
   if (!payload) {
     return (
       <div className="mx-auto max-w-md">
-        <Card title="Private detail view" subtitle="Companies, roles and links. Decrypted in your browser; nothing is sent anywhere.">
+        <Card
+          title="Private detail view"
+          subtitle="Companies, roles and links. Decrypted in your browser; nothing is sent anywhere."
+        >
           <form onSubmit={unlock} className="space-y-3">
+            <label className="block text-xs text-white/45" htmlFor="passphrase">
+              Passphrase
+            </label>
             <input
+              id="passphrase"
               type="password"
               autoFocus
               value={pass}
@@ -83,23 +91,48 @@ export default function PrivateView() {
 }
 
 function Table({ rows, generatedAt, onLock }) {
+  const [params, setParams] = useSearchParams()
+  const dateParam = params.get('date') || ''
+
   const [q, setQ] = useState('')
   const [result, setResult] = useState('All')
+  const [outcome, setOutcome] = useState('All')
   const [source, setSource] = useState('All')
   const [agent, setAgent] = useState('All')
+  const [sort, setSort] = useState('date-desc')
+  const [dateFilter, setDateFilter] = useState(dateParam)
+
+  useEffect(() => {
+    setDateFilter(dateParam)
+  }, [dateParam])
 
   const options = (key) => ['All', ...Array.from(new Set(rows.map((r) => r[key]).filter(Boolean))).sort()]
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return rows.filter(
+    let list = rows.filter(
       (r) =>
         (result === 'All' || r.result === result) &&
+        (outcome === 'All' || r.outcome === outcome) &&
         (source === 'All' || r.source === source) &&
         (agent === 'All' || r.appliedBy === agent) &&
+        (!dateFilter || r.date === dateFilter) &&
         (!needle || `${r.company} ${r.role} ${r.location} ${r.family}`.toLowerCase().includes(needle)),
     )
-  }, [rows, q, result, source, agent])
+
+    const cmp = {
+      'date-desc': (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.company.localeCompare(b.company)),
+      'date-asc': (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : a.company.localeCompare(b.company)),
+      company: (a, b) => a.company.localeCompare(b.company) || (a.date < b.date ? 1 : -1),
+      outcome: (a, b) => (a.outcome || '').localeCompare(b.outcome || '') || (a.date < b.date ? 1 : -1),
+    }
+    return list.sort(cmp[sort] ?? cmp['date-desc'])
+  }, [rows, q, result, outcome, source, agent, dateFilter, sort])
+
+  const submitted = filtered.filter((r) => r.result === 'Submitted')
+  const interviewed = submitted.filter((r) => r.outcome === 'Interview' || r.outcome === 'Offer').length
+  const offered = submitted.filter((r) => r.outcome === 'Offer').length
+  const rejected = submitted.filter((r) => r.outcome === 'Rejected').length
 
   const grouped = useMemo(() => {
     const m = new Map()
@@ -110,26 +143,73 @@ function Table({ rows, generatedAt, onLock }) {
     return [...m.entries()]
   }, [filtered])
 
+  function clearDate() {
+    setDateFilter('')
+    const next = new URLSearchParams(params)
+    next.delete('date')
+    setParams(next, { replace: true })
+  }
+
   return (
     <div className="space-y-4">
-      <div className="glass rise flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search company, role, location"
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm outline-none ring-accent/40 placeholder:text-white/30 focus:ring-2"
-        />
-        <Select value={result} onChange={setResult} options={options('result')} label="Status" />
-        <Select value={source} onChange={setSource} options={options('source')} label="Channel" />
-        <Select value={agent} onChange={setAgent} options={options('appliedBy')} label="Agent" />
-        <button onClick={onLock} className="rounded-xl px-3 py-2 text-xs text-white/55 hover:bg-white/5 hover:text-white">
-          Lock
-        </button>
+      <div className="glass glass-hover rise flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search company, role, location"
+            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm outline-none ring-accent/40 placeholder:text-white/30 focus:ring-2"
+          />
+          <Select value={result} onChange={setResult} options={options('result')} label="Status" />
+          <Select value={outcome} onChange={setOutcome} options={options('outcome')} label="Outcome" />
+          <Select value={source} onChange={setSource} options={options('source')} label="Channel" />
+          <Select value={agent} onChange={setAgent} options={options('appliedBy')} label="Agent" />
+          <Select
+            value={sort}
+            onChange={setSort}
+            options={[
+              { value: 'date-desc', label: 'Newest' },
+              { value: 'date-asc', label: 'Oldest' },
+              { value: 'company', label: 'Company' },
+              { value: 'outcome', label: 'Outcome' },
+            ]}
+            label="Sort"
+            objectOptions
+          />
+          <button
+            onClick={onLock}
+            className="rounded-xl px-3 py-2 text-xs text-white/55 hover:bg-white/5 hover:text-white"
+          >
+            Lock
+          </button>
+        </div>
+
+        {dateFilter && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-white/45">Date</span>
+            <Pill tone="accent" active>
+              {longDate(dateFilter)}
+            </Pill>
+            <Pill onClick={clearDate}>Clear date</Pill>
+          </div>
+        )}
       </div>
 
-      <p className="px-1 text-xs text-white/45">
-        <span className="num text-white/80">{filtered.length}</span> of {rows.length} attempts. Snapshot {relativeTime(generatedAt)}.
-      </p>
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-white/45">
+          <span className="num text-white/80">{filtered.length}</span> of {rows.length} attempts. Snapshot{' '}
+          {relativeTime(generatedAt)}.
+        </p>
+        <p className="text-xs text-white/45">
+          In view:{' '}
+          <span className="num text-emerald-300/90">{fmtPct(interviewed, submitted.length || 1)}</span> interview ·{' '}
+          <span className="num text-accent">{fmtPct(offered, submitted.length || 1)}</span> offer ·{' '}
+          <span className="num text-rose-300/80">{fmtPct(rejected, submitted.length || 1)}</span> rejected
+          {submitted.length ? (
+            <span className="text-white/30"> ({submitted.length} submitted)</span>
+          ) : null}
+        </p>
+      </div>
 
       {grouped.map(([date, items], gi) => (
         <section key={date} className="rise" style={{ animationDelay: `${Math.min(gi, 8) * 40}ms` }}>
@@ -137,9 +217,12 @@ function Table({ rows, generatedAt, onLock }) {
             {longDate(date)}
             <span className="num rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-white/55">{items.length}</span>
           </h3>
-          <ul className="glass divide-y divide-white/6 overflow-hidden">
+          <ul className="glass glass-hover divide-y divide-white/6 overflow-hidden">
             {items.map((r, i) => (
-              <li key={`${r.company}-${r.role}-${i}`} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+              <li
+                key={`${r.company}-${r.role}-${i}`}
+                className="flex flex-col gap-2 px-4 py-3 transition hover:bg-white/[0.03] sm:flex-row sm:items-center sm:gap-4"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-white/90">
                     {r.url ? (
@@ -157,7 +240,7 @@ function Table({ rows, generatedAt, onLock }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Pill tone={RESULT_TONE[r.result] ?? 'neutral'}>{r.result}</Pill>
-                  {r.result === 'Submitted' && r.outcome && r.outcome !== 'Applied' && (
+                  {r.result === 'Submitted' && r.outcome && (
                     <Pill tone={OUTCOME_TONE[r.outcome] ?? 'neutral'}>{r.outcome}</Pill>
                   )}
                   <Pill>{r.source}</Pill>
@@ -174,20 +257,24 @@ function Table({ rows, generatedAt, onLock }) {
   )
 }
 
-function Select({ value, onChange, options, label }) {
+function Select({ value, onChange, options, label, objectOptions = false }) {
   return (
     <label className="flex items-center gap-2 text-xs text-white/45">
-      {label}
+      <span>{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-accent/40"
       >
-        {options.map((o) => (
-          <option key={o} value={o} className="bg-ink">
-            {o}
-          </option>
-        ))}
+        {options.map((o) => {
+          const v = objectOptions ? o.value : o
+          const text = objectOptions ? o.label : o
+          return (
+            <option key={v} value={v} className="bg-ink">
+              {text}
+            </option>
+          )
+        })}
       </select>
     </label>
   )

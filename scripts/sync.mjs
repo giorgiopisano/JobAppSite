@@ -172,12 +172,43 @@ function buildPublic(rows) {
   const bestDay = perDay.reduce((a, b) => (b.count > a.count ? b : a), { date: firstDate, count: 0 })
 
   const funnelCount = (o) => submitted.filter((r) => r.outcome === o).length
+  const appliedOnly = funnelCount('Applied')
+  const interviewed = funnelCount('Interview')
+  const offered = funnelCount('Offer')
+  const rejected = funnelCount('Rejected')
+  const n = submitted.length || 1
+
+  // Classic conversion funnel (Interview includes Offer).
   const funnel = [
     { stage: 'Applied', count: submitted.length },
-    { stage: 'Interview', count: funnelCount('Interview') + funnelCount('Offer') },
-    { stage: 'Offer', count: funnelCount('Offer') },
+    { stage: 'Interview', count: interviewed + offered },
+    { stage: 'Offer', count: offered },
   ]
-  const rejected = funnelCount('Rejected')
+
+  // Outcome split for the interactive flow visualizer.
+  const outcomeFlow = [
+    { stage: 'Submitted', count: submitted.length },
+    { stage: 'Applied', count: appliedOnly },
+    { stage: 'Rejected', count: rejected },
+    { stage: 'Interview', count: interviewed },
+    { stage: 'Offer', count: offered },
+  ]
+
+  // Safe cross-tabs (no company / role / URL).
+  const bySourceOutcome = crossTab(enriched, 'source', 'outcome')
+  const byRoleOutcome = crossTab(enriched, 'family', 'outcome')
+  const byRegionOutcome = crossTab(enriched, 'region', 'outcome')
+
+  // Anonymized fact rows so the public UI can cross-filter without private fields.
+  const facts = enriched.map((r) => ({
+    date: r.date,
+    source: r.source || 'Other',
+    family: r.family,
+    region: r.region,
+    outcome: r.outcome || 'Applied',
+  }))
+
+  const rate = (count) => +(count / n).toFixed(3)
 
   return {
     generatedAt: new Date().toISOString(),
@@ -192,6 +223,12 @@ function buildPublic(rows) {
       blocked: inProgress.filter((r) => r.result === 'Blocked').length,
       incomplete: inProgress.filter((r) => r.result === 'Incomplete').length,
       rejected,
+      interviewed,
+      offered,
+      applied: appliedOnly,
+      interviewRate: rate(interviewed + offered),
+      offerRate: rate(offered),
+      rejectionRate: rate(rejected),
       streak,
       bestStreak,
       activeDays,
@@ -207,7 +244,29 @@ function buildPublic(rows) {
     byRegion: countBy(enriched, 'region'),
     byStatus: countBy(dated, 'result'),
     funnel,
+    outcomeFlow,
+    bySourceOutcome,
+    byRoleOutcome,
+    byRegionOutcome,
+    facts,
   }
+}
+
+/** Count pairs of (dimA, dimB) for Sankey / filtered conversion tables. */
+function crossTab(rows, keyA, keyB) {
+  const m = new Map()
+  for (const r of rows) {
+    const a = r[keyA] || 'Other'
+    const b = r[keyB] || 'Other'
+    const k = `${a}\0${b}`
+    m.set(k, (m.get(k) ?? 0) + 1)
+  }
+  return [...m.entries()]
+    .map(([k, count]) => {
+      const [a, b] = k.split('\0')
+      return { [keyA]: a, [keyB]: b, count }
+    })
+    .sort((x, y) => y.count - x.count)
 }
 
 // ---------- encryption ----------

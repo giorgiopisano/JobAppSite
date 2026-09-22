@@ -5,13 +5,12 @@ const DAYS = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun']
 const MIN_WEEKS = 13
 
 // GitHub-style contribution grid: columns are weeks, rows are weekdays.
-export default function Heatmap({ perDay }) {
+export default function Heatmap({ perDay, onDayClick }) {
   const [hover, setHover] = useState(null)
   const max = Math.max(1, ...perDay.map((d) => d.count))
 
   const weeks = useMemo(() => {
     if (!perDay.length) return []
-    // Pad with dim "before the hunt" days so the grid is at least MIN_WEEKS wide.
     const lead = Math.max(0, MIN_WEEKS * 7 - perDay.length)
     const padded = []
     for (let i = lead; i > 0; i--) padded.push({ date: addDays(perDay[0].date, -i), before: true, count: 0 })
@@ -58,28 +57,35 @@ export default function Heatmap({ perDay }) {
             {col.map((cell, ri) =>
               !cell || cell.pad ? (
                 <span key={ri} className="h-[14px] w-[14px]" />
+              ) : cell.before ? (
+                <span key={ri} className={`h-[14px] w-[14px] rounded-[3px] ${level(0, true)}`} />
               ) : (
-                cell.before ? (
-                  <span key={ri} className={`h-[14px] w-[14px] rounded-[3px] ${level(0, true)}`} />
-                ) : (
-                  <button
-                    key={ri}
-                    type="button"
-                    aria-label={`${cell.count} on ${longDate(cell.date)}`}
-                    onMouseEnter={() => setHover(cell)}
-                    onMouseLeave={() => setHover(null)}
-                    onFocus={() => setHover(cell)}
-                    onBlur={() => setHover(null)}
-                    className={`h-[14px] w-[14px] rounded-[3px] transition-transform hover:scale-125 ${level(cell.count)}`}
-                  />
-                )
+                <button
+                  key={ri}
+                  type="button"
+                  aria-label={`${cell.count} on ${longDate(cell.date)}`}
+                  onMouseEnter={() => setHover(cell)}
+                  onMouseLeave={() => setHover(null)}
+                  onFocus={() => setHover(cell)}
+                  onBlur={() => setHover(null)}
+                  onClick={() => onDayClick?.(cell)}
+                  className={`h-[14px] w-[14px] rounded-[3px] transition-transform hover:scale-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${level(cell.count)} ${
+                    onDayClick ? 'cursor-pointer' : ''
+                  }`}
+                />
               ),
             )}
           </div>
         ))}
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-white/45">
-        <span className="num">{hover ? `${hover.count} on ${longDate(hover.date)}` : 'Hover a day'}</span>
+        <span className="num">
+          {hover
+            ? `${hover.count} on ${longDate(hover.date)}${onDayClick ? ' · click for Detail' : ''}`
+            : onDayClick
+              ? 'Hover a day · click to open Detail'
+              : 'Hover a day'}
+        </span>
         <span className="flex items-center gap-1">
           less
           {['bg-white/6', 'bg-accent/30', 'bg-accent/50', 'bg-accent/75', 'bg-accent'].map((c) => (
