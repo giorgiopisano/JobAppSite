@@ -102,13 +102,14 @@ export function Breakdown({ items, total, colors, activeLabel, onSelect, dim }) 
     <ul className="space-y-3">
       {items.map((it, i) => {
         const pct = Math.round((it.count / sum) * 100)
-        const active = activeLabel === it.label
+        const filterValue = it.value ?? it.label
+        const active = activeLabel === filterValue
         const muted = activeLabel && !active
         return (
-          <li key={it.label}>
+          <li key={filterValue}>
             <button
               type="button"
-              onClick={() => onSelect?.(dim, it.label)}
+              onClick={() => onSelect?.(dim, filterValue)}
               className={`group w-full rounded-lg text-left transition ${onSelect ? 'cursor-pointer hover:bg-white/[0.03]' : 'cursor-default'} ${active ? 'bg-accent/10 ring-1 ring-accent/30' : ''} px-1.5 py-1 -mx-1.5`}
             >
               <div className="mb-1 flex items-center justify-between text-xs">
@@ -229,9 +230,11 @@ export function SourceOutcomeMatrix({ links, total }) {
         .sort((a, b) => b.count - a.count)
         .map((l) => (
           <li key={`${l.source}-${l.outcome}`} className="flex items-center gap-2 text-xs">
-            <span className="w-[30%] truncate text-white/65">{l.source}</span>
+            <span className="w-[38%] truncate text-white/65" title={l.source}>
+              {l.sourceLabel ?? l.source}
+            </span>
             <span className="text-white/25">→</span>
-            <span className="w-[28%] truncate text-white/65">{l.outcome}</span>
+            <span className="w-[22%] truncate text-white/65">{l.outcome}</span>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/6">
               <div
                 className="h-full rounded-full bg-accent/70 transition-all duration-500"

@@ -6,6 +6,7 @@ import { WeeklyBars, DailyArea, Breakdown, OutcomeFlow, SourceOutcomeMatrix } fr
 import { dataUrl, longDate, monthLabel, relativeTime, shortDate } from '../lib/format.js'
 import {
   buildInsightLine,
+  channelLabel,
   classicFunnelFrom,
   countBy,
   filterFacts,
@@ -58,12 +59,16 @@ export default function PublicDashboard() {
       rates,
       perDay,
       perWeek,
-      bySource: usingFilter ? countBy(rows, 'source') : data.bySource,
+      bySource: (usingFilter ? countBy(rows, 'source') : data.bySource).map((it) => ({
+        ...it,
+        value: it.label,
+        label: channelLabel(it.label),
+      })),
       byRoleFamily: usingFilter ? countBy(rows, 'family') : data.byRoleFamily,
       byRegion: usingFilter ? countBy(rows, 'region') : data.byRegion,
       outcomeFlow: usingFilter ? outcomeFlowFrom(rows) : data.outcomeFlow ?? outcomeFlowFrom(rows),
       funnel: usingFilter ? classicFunnelFrom(rows) : data.funnel,
-      links: sourceOutcomeLinks(rows),
+      links: sourceOutcomeLinks(rows).map((l) => ({ ...l, sourceLabel: channelLabel(l.source) })),
       insight: buildInsightLine(rows, usingFilter ? countBy(rows, 'source') : data.bySource),
       status: (usingFilter ? [] : data.byStatus).filter((s) => s.label !== 'Skipped'),
     }
@@ -142,7 +147,8 @@ export default function PublicDashboard() {
           <div className="relative mt-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-white/45">Filtered by</span>
             <Pill tone="accent" active>
-              {DIM_LABEL[filter.dim] ?? filter.dim}: {filter.value}
+              {DIM_LABEL[filter.dim] ?? filter.dim}:{' '}
+              {filter.dim === 'source' ? channelLabel(filter.value) : filter.value}
             </Pill>
             <Pill onClick={() => setFilter(null)}>Clear filter</Pill>
           </div>
@@ -194,7 +200,7 @@ export default function PublicDashboard() {
             onSelect={toggleFilter}
           />
         </Card>
-        <Card title="By channel" subtitle="How the application went in" delay={500}>
+        <Card title="By channel" subtitle="LinkedIn vs Jobs board bot vs Other / direct" delay={500}>
           <Breakdown
             items={slice.bySource}
             colors={PALETTE}
