@@ -24,9 +24,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5+ run on Node 24 (clears the Node 20 deprecation annotation).
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -46,7 +47,8 @@ jobs:
           VITE_BASE: ${{ vars.VITE_BASE || format('/{0}/', github.event.repository.name) }}
         run: npm run build
 
-      - uses: actions/upload-pages-artifact@v3
+      # v5 pulls upload-artifact on Node 24 (clears the Node 20 annotation).
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
@@ -58,4 +60,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
