@@ -64,12 +64,12 @@ export function Breakdown({ items, total, activeLabel, onSelect, dim }) {
               type={onSelect ? 'button' : undefined}
               onClick={onSelect ? () => onSelect(dim, filterValue) : undefined}
               aria-pressed={onSelect ? active : undefined}
-              className={`grid w-full grid-cols-[minmax(0,11rem)_1fr_auto] items-center gap-4 py-2.5 text-left text-sm transition ${
+              className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 text-left text-sm transition sm:grid-cols-[minmax(0,11rem)_1fr_auto] ${
                 muted ? 'opacity-40' : ''
               } ${onSelect ? 'cursor-pointer hover:opacity-70' : ''}`}
             >
               <span className={`truncate ${active ? 'font-semibold' : ''}`}>{it.label}</span>
-              <span className="h-1.5 overflow-hidden rounded-full bg-hair">
+              <span className="order-last col-span-2 h-1.5 overflow-hidden rounded-full bg-hair sm:order-none sm:col-span-1">
                 <span
                   className="block h-full rounded-full bg-ink transition-all duration-500"
                   style={{ width: `${Math.max(2, (it.count / max) * 100)}%` }}

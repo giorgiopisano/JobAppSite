@@ -8,9 +8,10 @@ export default function App() {
     <div className="min-h-screen">
       <header className="topbar sticky top-0 z-30">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-5">
-          <NavLink to="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+          <NavLink to="/" className="flex items-center gap-2 whitespace-nowrap text-[15px] font-semibold tracking-tight">
             <span className="h-3.5 w-3.5 rounded-[4px] bg-ink" aria-hidden="true" />
-            <span>Giorgio's Job Hunt</span>
+            <span className="hidden sm:inline">Giorgio's Job Hunt</span>
+            <span className="sm:hidden">Job Hunt</span>
           </NavLink>
           <nav className="segmented" aria-label="Sections">
             <NavLink to="/" end className={onApps ? '' : 'on'}>

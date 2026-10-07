@@ -86,6 +86,14 @@ body {
   white-space: nowrap;
 }
 
+.segmented > :focus {
+  outline: none;
+}
+
+.segmented > :focus-visible {
+  box-shadow: 0 0 0 2px rgba(29, 29, 31, 0.35);
+}
+
 .segmented > .on {
   background: #fff;
   box-shadow:
